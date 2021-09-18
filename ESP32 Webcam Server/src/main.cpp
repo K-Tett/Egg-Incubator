@@ -1,6 +1,7 @@
 //
 // TODO:
 // - [ ] Set the webcam server to use https protocol
+// - [ ] Customize the webcam web server
 //
 
 
@@ -184,5 +185,18 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  delay(10000);
+  delay(1);
+}
+
+//HTML & CSS sheet
+String HTML = "<!DOCTYPE html>\
+<html>\
+<body>\
+<h1>Egg Incubator Webcam Web Server</h1>\
+</body>\
+</html>";
+
+//Handle root url
+void handle_root() {
+  server.send(200, "text/html", HTML)
 }
