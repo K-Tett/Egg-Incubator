@@ -15,14 +15,18 @@ def serial_to_html_file(port=None, baudrate=115200):
         while True:
             try:
                 line = ser.readline().decode('utd-8').strip()
-                #Raw Images processing
-                if line == "Current frame:":
+                #Raw Images processing && save image to disk to update frontend
+                if line == 'Current frame:':
                     pixels = []
                     #Read the rows of the image
                     for i in range(SHAPE[0]):
-                #The "Different" pixels on image
+                #Process the difference between current and previous frame
                 if line.startswith('diff'):
-                if line.startswith('======'):
+                    #A pair of the x, y for detected changed tile
+                    y, x = line.split('\t')[1:3]
+                    changed.append(int(y),int(x))
+                #After ESP32 update motion frame -> write new motion image to frontend
+                if line.startswith('================='):
             except(SerialException, KeyboardInterrupt):
                 break
 
