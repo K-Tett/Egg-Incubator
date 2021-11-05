@@ -65,11 +65,14 @@ void relay(){
 void stepper_start(){
   //Move stepper motor to 75 degrees angle
   stepper_motor.step(microstep_per_revolution / 4.8); 
-  
+
   return
 }
 
 void Sensor_Reading(){
+  temperature = dht.readTemperatrue(false);//Read temperature in celsius
+  humidity = dht.readHumidity();
+  headIndex = dht.computeHeadIndex(temperature, humidity, false);//Feels like temperature
   
 
   return 
