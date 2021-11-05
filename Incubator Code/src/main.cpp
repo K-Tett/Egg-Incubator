@@ -1,11 +1,11 @@
 /**
  * TODO:
- * - [ ] Complete the code for sensor and relay control
+ * - [x] Complete the code for sensor and relay control
  * - [ ] Add kalman filtering to improve the sensor reading
  * - [ ] Sleep code
- * - [ ] serial print when debugging
- * - [ ] Connect to wifi
- * - [ ] Setup the MQTT protocol to communicate with PI
+ * - [x] serial print when debugging
+ * - [x] Connect to wifi
+ * - [x] Setup the MQTT protocol to communicate with PI
  * - [ ] Tune the control 
  */ 
 
