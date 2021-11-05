@@ -187,16 +187,3 @@ void loop() {
   // put your main code here, to run repeatedly:
   delay(1);
 }
-
-//HTML & CSS sheet
-String HTML = "<!DOCTYPE html>\
-<html>\
-<body>\
-<h1>Egg Incubator Webcam Web Server</h1>\
-</body>\
-</html>";
-
-//Handle root url
-void handle_root() {
-  server.send(200, "text/html", HTML)
-}
