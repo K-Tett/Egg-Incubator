@@ -13,6 +13,7 @@
 #include "esp_wifi.h"
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <Stepper.h>
 
 const char* ssid = "Your ssid";
 const char* password = "password";
@@ -26,7 +27,10 @@ float temperature;
 float heatIndex;
 bool light_status;
 bool fan_status;
-int stepper_motor_angle;
+bool stepper_motor_status = false;
+const int microstep_per_revolution = 2048;
+const int rounds_per_minutes = 12;
+Stepper stepper_motor = Stepper(microstep_per_revolution, pin_x, pin_y, pin_z, pin_n);
 
 #define DHTType DHT22
 #define DHT22Pin
@@ -58,6 +62,13 @@ void relay(){
   return
 }
 
+void stepper_start(){
+  //Move stepper motor to 75 degrees angle
+  stepper_motor.step(microstep_per_revolution / 4.8); 
+  
+  return
+}
+
 void Sensor_Reading(){
   
 
@@ -70,7 +81,6 @@ void serialPrintFunction(){
   Serialprint("The humidity of the incubator: %f%%\n", humidity)
   Serialprint("Feel like: %.2fC\n", heatIndex)
   Serialprint("The light status is on:", light_status)
-  //Serialprint("The stepper motor angle is: ", stepper_motor_angle)
 }
 
 //Inital setup to connect to router
@@ -123,6 +133,7 @@ void setup() {
 
   pinMode();
   dht.begin();
+  stepper_motor.setSpeed(rounds_per_minutes);
 
   setup_wifi();
   client.setServer(mqtt_server,mqtt_port);
@@ -136,6 +147,7 @@ void loop() {
   
   //functions start
   Sensor_Reading();
+  stepper_start();
   serialPrintFunction();
 
   esp_wifi_stop();
