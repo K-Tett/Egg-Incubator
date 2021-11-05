@@ -1,3 +1,14 @@
+/**
+ * TODO:
+ * - [ ] Complete the code for sensor and relay control
+ * - [ ] Add kalman filtering to improve the sensor reading
+ * - [ ] Sleep code
+ * - [ ] serial print when debugging
+ * - [ ] Connect to wifi
+ * - [ ] Setup the MQTT protocol to communicate with PI
+ * - [ ] Tune the control 
+ */ 
+
 #include <Arduino.h>
 #include "esp_wifi.h"
 #include <WiFi.h>

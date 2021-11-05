@@ -1,7 +1,7 @@
 //
 // TODO:
-// - [ ] Set the webcam server to use https protocol
-// - [ ] Customize the webcam web server
+// - [ ] Setup the camera to be prepare for streaming
+// - [ ] Upload the code
 //
 
 
