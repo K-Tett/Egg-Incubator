@@ -24,14 +24,12 @@ const char* ca_cert = "";
 float humidity;
 float temperature;
 float heatIndex;
-bool sound;
 bool light_status;
-float fan_speed;
-float servo_angle;
+bool fan_status;
+int stepper_motor_angle;
 
 #define DHTType DHT22
 #define DHT22Pin
-#define Sound_Sensor
 #define relay_pin
 #define uS_TO_S_FACTOR 
 #define TIME_TO_SLEEP
@@ -72,7 +70,7 @@ void serialPrintFunction(){
   Serialprint("The humidity of the incubator: %f%%\n", humidity)
   Serialprint("Feel like: %.2fC\n", heatIndex)
   Serialprint("The light status is on:", light_status)
-  //Serialprint("The servo ")
+  //Serialprint("The stepper motor angle is: ", stepper_motor_angle)
 }
 
 //Inital setup to connect to router
