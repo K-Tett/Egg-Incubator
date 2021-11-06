@@ -7,6 +7,7 @@
  * - [x] Connect to wifi
  * - [x] Setup the MQTT protocol to communicate with PI
  * - [ ] Tune the control 
+ * - [ ] RTC memory for stepper motor
  */ 
 
 #include <Arduino.h>
