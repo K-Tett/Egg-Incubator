@@ -41,14 +41,14 @@ char fan_status_string[4];
 Stepper stepper_motor = Stepper(microstep_per_revolution, stepper_pin_1, stepper_pin_2, stepper_pin_3, stepper_pin_4);
 
 #define DHTType DHT22
-#define DHT22Pin
-#define light_relay_pin_1
-#define fan1_relay_pin_2
-#define fan2_relay_pin_3
-#define stepper_pin_1
-#define stepper_pin_2
-#define stepper_pin_3
-#define stepper_pin_4
+#define DHT22Pin 34
+#define light_relay_pin_1 35
+#define fan1_relay_pin_2 32
+#define fan2_relay_pin_3 33
+#define stepper_pin_1 25
+#define stepper_pin_2 26
+#define stepper_pin_3 27
+#define stepper_pin_4 14
 #define uS_TO_S_FACTOR 
 #define TIME_TO_SLEEP
 
