@@ -1,13 +1,14 @@
 /**
  * TODO:
  * - [x] Complete the code for sensor and relay control
- * - [ ] Add kalman filtering to improve the sensor reading
+ * - [x] Add kalman filtering to improve the sensor reading
  * - [ ] Sleep code
  * - [x] serial print when debugging
  * - [x] Connect to wifi
  * - [x] Setup the MQTT protocol to communicate with PI
  * - [ ] Tune the control 
  * - [ ] RTC memory for stepper motor
+ * - [ ] Hold pin
  */ 
 
 #include <Arduino.h>
@@ -16,6 +17,7 @@
 #include <PubSubClient.h>
 #include <Stepper.h>
 #include <DHT.h>
+#include <SimpleKalmanFilter.h>
 
 const char* ssid = "OZ_HOME1_2G";
 const char* password = "0859078228";
@@ -40,6 +42,9 @@ char light_status_string[4];
 char fan_status_string[4];
 
 Stepper stepper_motor = Stepper(microstep_per_revolution, stepper_pin_1, stepper_pin_2, stepper_pin_3, stepper_pin_4);
+
+SimpleKalmanFilter temperature_kalman_filter(1,1,0.01);
+SimpleKalmanFitler humidity_kalman_filter(1,1,0.01);
 
 #define DHTType DHT22
 #define DHT22Pin 34
@@ -76,10 +81,10 @@ void StreamPrint_progmem(Print &out,PGM_P format,...)
 
 void relay(){
   //Wire fans and light to normally closed relay
-  if(temperature>39){
+  if(temperature>38){
     //Turn OFF
     digitalWrite(light_relay_pin_1, HIGH);
-  } else if (temperature<37){
+  } else if (temperature<36){
     //Turn On
     digitalWrite(light_relay_pin_1, LOW);
   }
@@ -110,13 +115,16 @@ void Sensor_Reading(){
   humidity = dht.readHumidity();
   headIndex = dht.computeHeadIndex(temperature, humidity, false);//Feels like temperature
 
+  float estimated_temperature = temperature_kalman_fitler.updateEstimate(temperature);
+  float estimated_humidity = humidity_kalman_filter.updateEstimate(humidity);
+
   return 
 }
 
 //Print in the serial monitor (disable if wifi)
 void serialPrintFunction(){
-  Serialprint("The temperature of the Incubator: %fC\n", temperature)
-  Serialprint("The humidity of the incubator: %f%%\n", humidity)
+  Serialprint("The temperature of the Incubator: %fC\n", estimated_temperature)
+  Serialprint("The humidity of the incubator: %f%%\n", estimated_humidity)
   Serialprint("Feel like: %.2fC\n", heatIndex)
   Serialprint("The light status is High/Low(OFF/ON): %c\n", light_status)
   Serialprint("The fan status is High/Low(OFF/ON): %c\n", fan_status)
