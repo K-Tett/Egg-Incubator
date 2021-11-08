@@ -2,20 +2,21 @@
  * TODO:
  * - [x] Complete the code for sensor and relay control
  * - [x] Add kalman filtering to improve the sensor reading
- * - [ ] Sleep code
+ * - [x] Sleep code
  * - [x] serial print when debugging
  * - [x] Connect to wifi
  * - [x] Setup the MQTT protocol to communicate with PI
  * - [ ] Tune the control 
- * - [ ] RTC memory for stepper motor
- * - [ ] Hold pin
+ * - [X] RTC memory for stepper motor
+ * - [ ] Send message over the wifi for the node red
+ * - [X] Hold pin
  */ 
 
 #include <Arduino.h>
 #include "soc/rtc_cntl_reg.h"
 #include "soc/rtc.h"
 #include "esp_wifi.h"
-#include "drive/gpio.h"
+#include "driver/gpio.h"
 #include "driver/rtc_io.h"
 #include <WiFi.h>
 #include <PubSubClient.h>
@@ -30,6 +31,9 @@ const char* ca_cert = "";
 
 #define mqtt_port 8883
 
+RTC_DATA_ATTR unsigned int record_counter = 0;
+RTC_DATA_ATTR unsigned int eggs_turn_counter = 0;
+RTC_DATA_ATTR unsigned int embryo_rest_counter = 0;
 float humidity;
 float temperature;
 float heatIndex;
@@ -59,8 +63,8 @@ SimpleKalmanFitler humidity_kalman_filter(1,1,0.01);
 #define stepper_pin_2 26
 #define stepper_pin_3 27
 #define stepper_pin_4 14
-#define uS_TO_S_FACTOR 1000000
-#define TIME_TO_SLEEP 300
+#define uS_TO_S_FACTOR 1000000 //Conversion factor for micro second to second
+#define TIME_TO_SLEEP 300 // Time ESP32 will go to sleep in seconds
 
 DHT dht(DHT22Pin, DHTType);
 
@@ -85,23 +89,37 @@ void StreamPrint_progmem(Print &out,PGM_P format,...)
 
 void relay(){
   //Wire fans and light to normally closed relay
-  if(temperature>38){
+  if(estimated_temperature>38){
     //Turn OFF
+    if (light_status = digitalRead(light_relay_pin_1) != HIGH) {
+      gpio_hold_dis(light_relay_pin_1);
+    }
     digitalWrite(light_relay_pin_1, HIGH);
     gpio_hold_en(light_relay_pin_1);
-  } else if (temperature<36){
+  } else if (estimated_temperature<36){
     //Turn On
+    if (light_status = digitalRead(light_relay_pin_1) != LOW) {
+      gpio_hold_dis(light_relay_pin_1);
+    }
     digitalWrite(light_relay_pin_1, LOW);
     gpio_hold_en(light_relay_pin_1);
   }
-  if(humidity>53){
+  if(estimated_humidity>53){
     //Turn On
+    if (fan_status = digitalRead(fan1_relay_pin_2) != LOW){
+      gpio_hold_dis(fan1_relay_pin_2);
+      gpio_hold_dis(fan2_relay_pin_3);
+    }
     digitalWrite(fan1_relay_pin_2, LOW);
     digitalWrite(fan2_relay_pin_3, LOW);
     gpio_hold_en(fan1_relay_pin_2);
     gpio_hold_en(fan2_relay_pin_3);
-  } else if (humidity<44){
+  } else if (estimated_humidity<44){
     //Turn Off
+    if (fan_status = digitalRead(fan1_relay_pin_2) != HIGH){
+      gpio_hold_dis(fan1_relay_pin_2);
+      gpio_hold_dis(fan2_relay_pin_3);
+    }
     digitalWrite(fan1_relay_pin_2, HIGH);
     digitalWrite(fan2_relay_pin_3, HIGH);
     gpio_hold_en(fan1_relay_pin_2);
@@ -255,9 +273,23 @@ void loop() {
   //functions start
   Sensor_Reading();
   relay();
-  stepper_start();
+  if (embryo_rest_counter < 180){
+    if (eggs_turn_counter < 3){
+      if (record_counter >= 36){
+        stepper_start();
+        record_counter = 0;
+        eggs_turn_counter++;
+      }
+    } else {
+      eggs_turn_counter = 0;
+    }
+  } else {
+    embryo_rest_counter = 0;
+  }
   client_publish();
   serialPrintFunction();
+
+  record_counter++;
 
   esp_wifi_stop();
 
