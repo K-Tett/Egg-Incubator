@@ -10,9 +10,14 @@
  * - [X] RTC memory for stepper motor
  * - [ ] Send message over the wifi for the node red
  * - [X] Hold pin
+ * - [ ] Use HTTPS protocol (optional)
+ * ex:
+ * https://github.com/espressif/arduino-esp32/blob/master/libraries/WiFiClientSecure/examples/WiFiClientSecure/WiFiClientSecure.ino
+ * https://www.iotsharing.com/2017/08/how-to-use-https-in-arduino-esp32.html
  */ 
 
 #include <Arduino.h>
+#include <math.h>
 #include "soc/rtc_cntl_reg.h"
 #include "soc/rtc.h"
 #include "esp_wifi.h"
@@ -24,12 +29,16 @@
 #include <DHT.h>
 #include <SimpleKalmanFilter.h>
 
+PubSubClient client;
+
 const char* ssid = "OZ_HOME1_2G";
 const char* password = "0859078228";
 const char* mqtt_server = "192.168.1.187";
-const char* ca_cert = "";
 
-#define mqtt_port 8883
+#define mqtt_port 1883
+#define MQTT_USER ""
+#define MQTT_PASSWORD ""
+#define MQTT_SERIAL_RECEIVER_CH ""
 
 RTC_DATA_ATTR unsigned int record_counter = 0;
 RTC_DATA_ATTR unsigned int eggs_turn_counter = 0;
@@ -49,24 +58,22 @@ char heat_index_string[8];
 char light_status_string[4];
 char fan_status_string[4];
 
-Stepper stepper_motor = Stepper(microstep_per_revolution, stepper_pin_1, stepper_pin_2, stepper_pin_3, stepper_pin_4);
-
-SimpleKalmanFilter temperature_kalman_filter(1,1,0.01);
-SimpleKalmanFitler humidity_kalman_filter(1,1,0.01);
-
+#define ledPin GPIO_NUM_2
 #define DHTType DHT22
-#define DHT22Pin 34
-#define light_relay_pin_1 35
-#define fan1_relay_pin_2 32
-#define fan2_relay_pin_3 33
-#define stepper_pin_1 25
-#define stepper_pin_2 26
-#define stepper_pin_3 27
-#define stepper_pin_4 14
+#define DHT22Pin GPIO_NUM_34
+#define light_relay_pin_1 GPIO_NUM_35
+#define fan1_relay_pin_2 GPIO_NUM_32
+#define fan2_relay_pin_3 GPIO_NUM_33
+#define stepper_pin_1 GPIO_NUM_25
+#define stepper_pin_2 GPIO_NUM_26
+#define stepper_pin_3 GPIO_NUM_27
+#define stepper_pin_4 GPIO_NUM_14
 #define uS_TO_S_FACTOR 1000000 //Conversion factor for micro second to second
 #define TIME_TO_SLEEP 300 // Time ESP32 will go to sleep in seconds
 
 DHT dht(DHT22Pin, DHTType);
+
+Stepper stepper_motor = Stepper(microstep_per_revolution, stepper_pin_1, stepper_pin_2, stepper_pin_3, stepper_pin_4);
 
 //Print serialprint easier way
 void StreamPrint_progmem(Print &out,PGM_P format,...)
@@ -88,25 +95,27 @@ void StreamPrint_progmem(Print &out,PGM_P format,...)
 #define Serialprint(format, ...) StreamPrint_progmem(Serial,PSTR(format),##__VA_ARGS__)
 
 void relay(){
+  light_status = digitalRead(light_relay_pin_1);
+  fan_status = digitalRead(fan1_relay_pin_2);
   //Wire fans and light to normally closed relay
-  if(estimated_temperature>38){
+  if(temperature>38){
     //Turn OFF
-    if (light_status = digitalRead(light_relay_pin_1) != HIGH) {
+    if (light_status != HIGH) {
       gpio_hold_dis(light_relay_pin_1);
     }
     digitalWrite(light_relay_pin_1, HIGH);
     gpio_hold_en(light_relay_pin_1);
-  } else if (estimated_temperature<36){
+  } else if (temperature<36){
     //Turn On
-    if (light_status = digitalRead(light_relay_pin_1) != LOW) {
+    if (light_status != LOW) {
       gpio_hold_dis(light_relay_pin_1);
     }
     digitalWrite(light_relay_pin_1, LOW);
     gpio_hold_en(light_relay_pin_1);
   }
-  if(estimated_humidity>53){
+  if(humidity>53){
     //Turn On
-    if (fan_status = digitalRead(fan1_relay_pin_2) != LOW){
+    if (fan_status != LOW){
       gpio_hold_dis(fan1_relay_pin_2);
       gpio_hold_dis(fan2_relay_pin_3);
     }
@@ -114,9 +123,9 @@ void relay(){
     digitalWrite(fan2_relay_pin_3, LOW);
     gpio_hold_en(fan1_relay_pin_2);
     gpio_hold_en(fan2_relay_pin_3);
-  } else if (estimated_humidity<44){
+  } else if (humidity<44){
     //Turn Off
-    if (fan_status = digitalRead(fan1_relay_pin_2) != HIGH){
+    if (fan_status != HIGH){
       gpio_hold_dis(fan1_relay_pin_2);
       gpio_hold_dis(fan2_relay_pin_3);
     }
@@ -128,51 +137,40 @@ void relay(){
   light_status = digitalRead(light_relay_pin_1);
   fan_status = digitalRead(fan1_relay_pin_2);
 
-  return
+  return;
 }
 
 void stepper_start(){
   //Move stepper motor to 75 degrees angle
   stepper_motor.step(microstep_per_revolution / 4.8); 
 
-  return
+  return;
 }
 
 void Sensor_Reading(){
-  temperature = dht.readTemperatrue(false);//Read temperature in celsius
+  temperature = dht.readTemperature(false);//Read temperature in celsius
   humidity = dht.readHumidity();
-  headIndex = dht.computeHeadIndex(temperature, humidity, false);//Feels like temperature
+  heatIndex = dht.computeHeatIndex(temperature, humidity, false);//Feels like temperature
 
-  float estimated_temperature = temperature_kalman_fitler.updateEstimate(temperature);
-  float estimated_humidity = humidity_kalman_filter.updateEstimate(humidity);
-
-  return 
+  return ;
 }
 
 //Print in the serial monitor (disable if wifi)
 void serialPrintFunction(){
-  Serialprint("The temperature of the Incubator: %fC\n", estimated_temperature)
-  Serialprint("The humidity of the incubator: %f%%\n", estimated_humidity)
-  Serialprint("Feel like: %.2fC\n", heatIndex)
-  Serialprint("The light status is High/Low(OFF/ON): %c\n", light_status)
-  Serialprint("The fan status is High/Low(OFF/ON): %c\n", fan_status)
-}
+  Serialprint("The temperature of the Incubator: %fC\n", temperature);
+  Serialprint("The humidity of the incubator: %f%%\n", humidity);
+  Serialprint("Feel like: %.2fC\n", heatIndex);
+  Serialprint("The light status is High/Low(OFF/ON): %c\n", light_status);
+  Serialprint("The fan status is High/Low(OFF/ON): %c\n", fan_status);
 
-//Client publishing data to MQTT broker
-void client_publich(){
-  client.publish("esp32/temperature", temperature_string);
-  client.publish("esp32/humidity", humidity_string);
-  client.publish("esp32/heat_index", heat_index_string);
-  client.publish("esp32/light_status", light_status_string);
-  client.publish("esp32/fan_status", fan_status_string);
-  
-  return
+  return;
 }
 
 //Inital setup to connect to router
 void setup_wifi(){
   delay(10);
-  Serialprint();
+
+  //connecting to the wifi
   Serialprint("Connecting to ");
   Serialprint(ssid);
 
@@ -186,9 +184,37 @@ void setup_wifi(){
   Serialprint("");
   Serialprint("WiFi connected");
   Serialprint("IP address: ");
-  Serialprint(WiFi.localIP());
+  Serial.print(WiFi.localIP());
+}
+
+//Callback function
+void callback(char* topic, byte* message, unsigned int length) {
+  Serialprint("Message arrived on topic: ");
+  Serialprint(topic);
+  Serialprint(". Message: ");
+  String messageTemp;
   
-  client.setCaCert(ca_cert);
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)message[i]);
+    messageTemp += (char)message[i];
+  }
+  Serial.println();
+
+  // Feel free to add more if statements to control more GPIOs with MQTT
+
+  // If a message is received on the topic esp32/output, you check if the message is either "on" or "off". 
+  // Changes the output state according to the message
+  if (String(topic) == "esp32/output") {
+    Serial.print("Changing output to ");
+    if(messageTemp == "on"){
+      Serialprint("on\n");
+      digitalWrite(ledPin, HIGH);
+    }
+    else if(messageTemp == "off"){
+      Serialprint("off\n");
+      digitalWrite(ledPin, LOW);
+    }
+  }
 }
 
 //Reconnect if initial connection failed
@@ -208,7 +234,7 @@ void reconnect(){
       client.subscribe(MQTT_SERIAL_RECEIVER_CH);
     } else {
       Serialprint("failed, rc=");
-      Serialprint(client.state());
+      Serial.print(client.state());
       Serialprint(" try again in 5 seconds");
       // Wait 5 seconds before retrying
       delay(5000);
@@ -216,34 +242,15 @@ void reconnect(){
   }
 }
 
-//Callback function
-void callback(char* topic, byte* message, unsigned int length) {
-  Serial.print("Message arrived on topic: ");
-  Serial.print(topic);
-  Serial.print(". Message: ");
-  String messageTemp;
+//Client publishing data to MQTT broker
+void client_publish(){
+  client.publish("esp32/temperature", temperature_string);
+  client.publish("esp32/humidity", humidity_string);
+  client.publish("esp32/heat_index", heat_index_string);
+  client.publish("esp32/light_status", light_status_string);
+  client.publish("esp32/fan_status", fan_status_string);
   
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)message[i]);
-    messageTemp += (char)message[i];
-  }
-  Serial.println();
-
-  // Feel free to add more if statements to control more GPIOs with MQTT
-
-  // If a message is received on the topic esp32/output, you check if the message is either "on" or "off". 
-  // Changes the output state according to the message
-  if (String(topic) == "esp32/output") {
-    Serial.print("Changing output to ");
-    if(messageTemp == "on"){
-      Serial.println("on");
-      digitalWrite(ledPin, HIGH);
-    }
-    else if(messageTemp == "off"){
-      Serial.println("off");
-      digitalWrite(ledPin, LOW);
-    }
-  }
+  return;
 }
 
 void setup() {
@@ -252,7 +259,7 @@ void setup() {
   pinMode(light_relay_pin_1, OUTPUT);
   pinMode(fan1_relay_pin_2, OUTPUT);
   pinMode(fan2_relay_pin_3, OUTPUT);
-  pinMode();
+  pinMode(ledPin, OUTPUT);
   stepper_motor.setSpeed(rounds_per_minutes);
 
   setup_wifi();
@@ -293,7 +300,7 @@ void loop() {
 
   esp_wifi_stop();
 
-  esp_sleep_enable_timer_wakeup(TIME_TOSLEEP * uS_TO_S_FACTOR)
+  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
   gpio_deep_sleep_hold_en();
   esp_deep_sleep_start();
 }
