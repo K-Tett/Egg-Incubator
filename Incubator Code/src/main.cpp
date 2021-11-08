@@ -12,7 +12,11 @@
  */ 
 
 #include <Arduino.h>
+#include "soc/rtc_cntl_reg.h"
+#include "soc/rtc.h"
 #include "esp_wifi.h"
+#include "drive/gpio.h"
+#include "driver/rtc_io.h"
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <Stepper.h>
@@ -55,8 +59,8 @@ SimpleKalmanFitler humidity_kalman_filter(1,1,0.01);
 #define stepper_pin_2 26
 #define stepper_pin_3 27
 #define stepper_pin_4 14
-#define uS_TO_S_FACTOR 
-#define TIME_TO_SLEEP
+#define uS_TO_S_FACTOR 1000000
+#define TIME_TO_SLEEP 300
 
 DHT dht(DHT22Pin, DHTType);
 
@@ -84,18 +88,24 @@ void relay(){
   if(temperature>38){
     //Turn OFF
     digitalWrite(light_relay_pin_1, HIGH);
+    gpio_hold_en(light_relay_pin_1);
   } else if (temperature<36){
     //Turn On
     digitalWrite(light_relay_pin_1, LOW);
+    gpio_hold_en(light_relay_pin_1);
   }
   if(humidity>53){
     //Turn On
     digitalWrite(fan1_relay_pin_2, LOW);
     digitalWrite(fan2_relay_pin_3, LOW);
+    gpio_hold_en(fan1_relay_pin_2);
+    gpio_hold_en(fan2_relay_pin_3);
   } else if (humidity<44){
     //Turn Off
     digitalWrite(fan1_relay_pin_2, HIGH);
     digitalWrite(fan2_relay_pin_3, HIGH);
+    gpio_hold_en(fan1_relay_pin_2);
+    gpio_hold_en(fan2_relay_pin_3);
   }
   light_status = digitalRead(light_relay_pin_1);
   fan_status = digitalRead(fan1_relay_pin_2);
@@ -218,7 +228,6 @@ void callback(char* topic, byte* message, unsigned int length) {
   }
 }
 
-
 void setup() {
   Serial.begin(115200);
 
@@ -235,6 +244,7 @@ void setup() {
 }
 
 void loop() {
+
   if (!client.connected()){
     reconnect();
   }
@@ -252,5 +262,6 @@ void loop() {
   esp_wifi_stop();
 
   esp_sleep_enable_timer_wakeup(TIME_TOSLEEP * uS_TO_S_FACTOR)
+  gpio_deep_sleep_hold_en();
   esp_deep_sleep_start();
 }
