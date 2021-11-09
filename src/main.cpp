@@ -69,7 +69,7 @@ char fan_status_string[4];
 #define stepper_pin_3 GPIO_NUM_27
 #define stepper_pin_4 GPIO_NUM_14
 #define uS_TO_S_FACTOR 1000000 //Conversion factor for micro second to second
-#define TIME_TO_SLEEP 300 // Time ESP32 will go to sleep in seconds
+#define TIME_TO_SLEEP 60 // Time ESP32 will go to sleep in seconds
 
 DHT dht(DHT22Pin, DHTType);
 
