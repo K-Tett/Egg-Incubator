@@ -40,17 +40,17 @@ const char* mqtt_server = "192.168.1.187";
 #define MQTT_PASSWORD ""
 #define MQTT_SERIAL_RECEIVER_CH ""
 
-RTC_DATA_ATTR unsigned int record_counter = 0;
-RTC_DATA_ATTR unsigned int eggs_turn_counter = 0;
-RTC_DATA_ATTR unsigned int embryo_rest_counter = 0;
+//RTC_DATA_ATTR unsigned int record_counter = 0;
+//RTC_DATA_ATTR unsigned int eggs_turn_counter = 0;
+//RTC_DATA_ATTR unsigned int embryo_rest_counter = 0;
 float humidity;
 float temperature;
 float heatIndex;
 bool light_status;
 bool fan_status;
-bool stepper_motor_status = false;
-const int microstep_per_revolution = 2048;
-const int rounds_per_minutes = 12;
+//bool stepper_motor_status = false;
+//const int microstep_per_revolution = 2048;
+//const int rounds_per_minutes = 12;
 
 char temperature_string[8];
 char humidity_string[8];
@@ -64,16 +64,16 @@ char fan_status_string[4];
 #define light_relay_pin_1 GPIO_NUM_35
 #define fan1_relay_pin_2 GPIO_NUM_32
 #define fan2_relay_pin_3 GPIO_NUM_33
-#define stepper_pin_1 GPIO_NUM_25
-#define stepper_pin_2 GPIO_NUM_26
-#define stepper_pin_3 GPIO_NUM_27
-#define stepper_pin_4 GPIO_NUM_14
+//#define stepper_pin_1 GPIO_NUM_25
+//#define stepper_pin_2 GPIO_NUM_26
+//#define stepper_pin_3 GPIO_NUM_27
+//#define stepper_pin_4 GPIO_NUM_14
 #define uS_TO_S_FACTOR 1000000 //Conversion factor for micro second to second
-#define TIME_TO_SLEEP 60 // Time ESP32 will go to sleep in seconds
+#define TIME_TO_SLEEP 30 // Time ESP32 will go to sleep in seconds
 
 DHT dht(DHT22Pin, DHTType);
 
-Stepper stepper_motor = Stepper(microstep_per_revolution, stepper_pin_1, stepper_pin_2, stepper_pin_3, stepper_pin_4);
+//Stepper stepper_motor = Stepper(microstep_per_revolution, stepper_pin_1, stepper_pin_2, stepper_pin_3, stepper_pin_4);
 
 //Print serialprint easier way
 void StreamPrint_progmem(Print &out,PGM_P format,...)
@@ -140,12 +140,14 @@ void relay(){
   return;
 }
 
+/*
 void stepper_start(){
   //Move stepper motor to 75 degrees angle
   stepper_motor.step(microstep_per_revolution / 4.8); 
 
   return;
 }
+*/
 
 void Sensor_Reading(){
   temperature = dht.readTemperature(false);//Read temperature in celsius
@@ -260,7 +262,7 @@ void setup() {
   pinMode(fan1_relay_pin_2, OUTPUT);
   pinMode(fan2_relay_pin_3, OUTPUT);
   pinMode(ledPin, OUTPUT);
-  stepper_motor.setSpeed(rounds_per_minutes);
+  //stepper_motor.setSpeed(rounds_per_minutes);
 
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
@@ -280,6 +282,8 @@ void loop() {
   //functions start
   Sensor_Reading();
   relay();
+
+  /*
   if (embryo_rest_counter < 180){
     if (eggs_turn_counter < 3){
       if (record_counter >= 36){
@@ -293,10 +297,12 @@ void loop() {
   } else {
     embryo_rest_counter = 0;
   }
+  */
+
   client_publish();
   serialPrintFunction();
 
-  record_counter++;
+  //record_counter++;
 
   esp_wifi_stop();
 
